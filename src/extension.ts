@@ -18,11 +18,11 @@ export async function activate(context: vscode.ExtensionContext) {
   localizeInitialize();
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      'extension.conventionalCommits',
+      'autoSuggestCC.createCommit',
       createConventionalCommits(),
     ),
     vscode.commands.registerCommand(
-      'extension.conventionalCommits.resetGlobalState',
+      'autoSuggestCC.createCommit.resetGlobalState',
       () => {
         context.globalState.update('version', '0.0.0');
         const title = localize('extension.name');
@@ -31,12 +31,15 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     ),
     vscode.commands.registerCommand(
-      'extension.conventionalCommits.showNewVersionNotes',
+      'autoSuggestCC.createCommit.showNewVersionNotes',
       () => output.showNewVersionNotes(ID, context, true),
     ),
   );
   output.showNewVersionNotes(ID, context);
-  vscode.workspace.registerFileSystemProvider('commit-message', CommitProvider);
+  vscode.workspace.registerFileSystemProvider(
+    'auto-suggest-cc-message',
+    CommitProvider,
+  );
 }
 
 export function deactivate() {}

@@ -1,4 +1,4 @@
-import { execFileSync } from 'child_process';
+import { pathToFileURL } from 'url';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -13,6 +13,7 @@ async function main(): Promise<void> {
   const extensionTestsPath = path.resolve(__dirname, 'suite', 'index.js');
 
   const mock = createMockRepo();
+  const second = createMockRepo();
   // Fresh, isolated VS Code user-data dir so the host has none of the
   // developer's profile state (settings, recent quick-pick history,
   // workspace trust decisions) bleeding into the stubbed prompt flow.
@@ -25,13 +26,15 @@ async function main(): Promise<void> {
       extensionDevelopmentPath,
       extensionTestsPath,
       launchArgs: [
-        mock.repoPath,
+        // A folder URI preserves spaces when test-electron launches through cmd.exe.
+        '--folder-uri=' + pathToFileURL(mock.repoPath).href,
         '--disable-extensions',
         '--disable-workspace-trust',
         `--user-data-dir=${userDataDir}`,
       ],
       extensionTestsEnv: {
         MOCK_REPO_PATH: mock.repoPath,
+        SECOND_REPO_PATH: second.repoPath,
       },
     });
 
@@ -43,6 +46,7 @@ async function main(): Promise<void> {
     process.exitCode = 1;
   } finally {
     cleanupMockRepo(mock.repoPath);
+    cleanupMockRepo(second.repoPath);
     fs.rmSync(userDataDir, { recursive: true, force: true });
   }
 }

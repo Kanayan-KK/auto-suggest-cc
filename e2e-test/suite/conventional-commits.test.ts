@@ -1,5 +1,5 @@
 /**
- * End-to-end test for the `extension.conventionalCommits` command.
+ * End-to-end test for the `autoSuggestCC.createCommit` command.
  *
  * Runs inside the VS Code extension host launched by `@vscode/test-electron`.
  * Drives the prompt machine with stubbed answers, executes the command
@@ -20,7 +20,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
-import { installPromptStubs, PromptStubs } from './stub-prompts';
+import { acceptDefault, installPromptStubs, PromptStubs } from './stub-prompts';
 
 // --- VS Code Git API surface we touch (typed loosely) ----------------------
 // The vendored `src/vendors/git.d.ts` is intentionally a frozen subset and
@@ -44,8 +44,8 @@ interface VscodeGitExports {
   getAPI(version: 1): GitAPI;
 }
 
-const EXTENSION_ID = 'vivaxy.vscode-conventional-commits';
-const COMMAND_ID = 'extension.conventionalCommits';
+const EXTENSION_ID = 'Kanayan-KK.auto-suggest-cc';
+const COMMAND_ID = 'autoSuggestCC.createCommit';
 
 /** Sleep helper for polling. */
 function delay(ms: number): Promise<void> {
@@ -84,7 +84,7 @@ async function waitFor<T>(
   );
 }
 
-suite('extension.conventionalCommits e2e', () => {
+suite('autoSuggestCC.createCommit e2e', () => {
   let repoPath: string;
   let repository: GitRepository;
   let gitApi: GitAPI;
@@ -171,7 +171,9 @@ suite('extension.conventionalCommits e2e', () => {
     //    `onDidOpenRepository`.
     repository = await waitFor<GitRepository>(
       () =>
-        gitApi.repositories.find((repo) => repo.rootUri.fsPath === repoPath),
+        gitApi.repositories.find(
+          (repo) => repo.rootUri.fsPath === vscode.Uri.file(repoPath).fsPath,
+        ),
       {
         timeoutMs: 30000,
         description: `git.repositories to contain ${repoPath}`,
@@ -315,14 +317,14 @@ suite('extension.conventionalCommits e2e', () => {
       // off, body on, footer on, showEditor off, autoCommit on, emojiFormat
       // 'code'). Order from src/lib/prompts.ts after filtering:
       //   1. type     QuickPick   → 'feat'
-      //   2. scope    QuickPick   → '' (no scope; stub maps to noneItem)
+      //   2. scope    QuickPick   → accept the suggested README scope
       //   3. gitmoji  QuickPick   → ':sparkles:'  (label === code)
       //   4. subject  InputBox    → 'add e2e harness'
       //   5. body     InputBox    → ''
       //   6. footer   InputBox    → ''
       stubs = installPromptStubs([
         'feat',
-        '',
+        acceptDefault,
         ':sparkles:',
         'add e2e harness',
         '',
@@ -370,7 +372,7 @@ suite('extension.conventionalCommits e2e', () => {
 
     // (iii) inputBox.value matched the expected serialized message at the
     //       time the prompt machine resolved.
-    const expectedMessage = 'feat: :sparkles: add e2e harness';
+    const expectedMessage = 'feat(README): :sparkles: add e2e harness';
     assert.strictEqual(
       capturedInputBoxValue,
       expectedMessage,
@@ -390,7 +392,7 @@ suite('extension.conventionalCommits e2e', () => {
 
     assert.match(
       headMessage,
-      /^feat: :sparkles: add e2e harness/,
+      /^feat\(README\): :sparkles: add e2e harness/,
       `HEAD commit message should match the conventional-commits header — got ${JSON.stringify(
         headMessage,
       )}`,

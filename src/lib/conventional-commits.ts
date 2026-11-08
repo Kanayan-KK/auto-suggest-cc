@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as VSCodeGit from '../vendors/git';
 import prompts from './prompts';
+import { scopeFromFiles } from './scope-default';
 import * as configuration from './configuration';
 import * as output from './output';
 import commitlint from './commitlint';
@@ -29,6 +30,39 @@ function hasChanges(repo: VSCodeGit.Repository) {
     repo.state.mergeChanges.length ||
     repo.state.indexChanges.length
   );
+}
+
+function getSuggestedScope(repository: VSCodeGit.Repository) {
+  const root = repository.rootUri;
+  const mode = vscode.workspace
+    .getConfiguration('conventionalCommits', root)
+    .get('defaultScopeMode');
+  if (mode !== 'fromChangedFiles') return undefined;
+
+  // A staged commit ignores unstaged files. Unresolved merges cannot be committed.
+  const state = repository.state;
+  if (state.mergeChanges.length) return undefined;
+  let changes = state.indexChanges;
+  if (!changes.length) {
+    const git = vscode.workspace.getConfiguration('git', root);
+    if (!git.get<boolean>('enableSmartCommit')) return undefined;
+    // VS Code commits only tracked changes when untracked files are separate or hidden.
+    const trackedOnly =
+      git.get<string>('smartCommitChanges', 'all') === 'tracked' ||
+      git.get<string>('untrackedChanges', 'mixed') !== 'mixed';
+    changes = state.workingTreeChanges.filter(
+      (change) =>
+        change.status !== VSCodeGit.Status.IGNORED &&
+        (!trackedOnly || change.status !== VSCodeGit.Status.UNTRACKED),
+    );
+  }
+
+  // The Git API supplies the destination URI for a staged rename.
+  const scope = scopeFromFiles(
+    root.fsPath,
+    changes.map((change) => change.uri.fsPath),
+  );
+  return scope && !commitlint.lintScope(scope) ? scope : undefined;
 }
 
 async function getRepository({
@@ -151,6 +185,7 @@ export default function createConventionalCommits() {
         emojiFormat:
           configuration.get<configuration.EMOJI_FORMAT>('emojiFormat'),
         lineBreak: configuration.get<string>('lineBreak'),
+        suggestedScope: getSuggestedScope(repository),
         promptScopes: configuration.get<boolean>('promptScopes'),
         promptBody: configuration.get<boolean>('promptBody'),
         promptFooter: configuration.get<boolean>('promptFooter'),

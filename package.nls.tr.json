@@ -1,7 +1,7 @@
 {
-  "extension.name": "Kurallı Commit'ler",
-  "extension.commands.resetGlobalState": "Kurallı Commit'ler: Genel Durumu Sıfırla",
-  "extension.commands.showNewVersionNotes": "Kurallı Commit'ler: Sürüm Notlarını Göster",
+  "extension.name": "Auto Suggest CC",
+  "extension.commands.resetGlobalState": "Auto Suggest CC: Genel Durumu Sıfırla",
+  "extension.commands.showNewVersionNotes": "Auto Suggest CC: Sürüm Notlarını Göster",
   "extension.configuration.autoCommit.markdownDescription": "Eklentinin, mesaj oluşturulduktan veya editör sekmesi kapatıldıktan sonra dosyaları commit edip etmeyeceğini kontrol eder.\n\n`#git.enableSmartCommit#` etkinleştirildiğinde ve `#git.smartCommitChanges#` `all` olarak ayarlandığında, hazırlanmış (staged) değişiklik olmadığında tüm değişikliklerin commit edilmesine olanak tanır.\n\nCommit işleminden sonra `git.sync` komutunu çalıştırmak için `#git.postCommitCommand#` ayarını `sync` olarak ayarlayın.",
   "extension.configuration.storeScopesGlobally.markdownDescription": "Eklentinin, tanımlanan kapsamları çalışma alanı ayarlarınızda mı yoksa kullanıcı ayarlarınızda mı saklayacağını kontrol eder.",
   "extension.configuration.storeTagsGlobally.markdownDescription": "Eklentinin, Etiketler çalışma alanı ayarlarınızda mı yoksa kullanıcı ayarlarınızda mı saklayacağını kontrol eder.",

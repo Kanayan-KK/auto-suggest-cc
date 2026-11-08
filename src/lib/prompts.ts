@@ -36,6 +36,7 @@ export default async function prompts({
   showEditor,
   emojiFormat,
   lineBreak,
+  suggestedScope,
   promptScopes,
   promptBody,
   promptFooter,
@@ -47,6 +48,7 @@ export default async function prompts({
   showEditor: boolean;
   emojiFormat: configuration.EMOJI_FORMAT;
   lineBreak: string;
+  suggestedScope?: string;
   promptScopes: boolean;
   promptBody: boolean;
   promptFooter: boolean;
@@ -130,47 +132,33 @@ export default async function prompts({
       alwaysShow: true,
     };
 
-    // Use scopes from prompt config if available
-    if (scopeEnumFromPrompt && Object.keys(scopeEnumFromPrompt).length > 0) {
-      return {
-        type: PROMPT_TYPES.QUICK_PICK,
-        name,
-        placeholder,
-        items: Object.entries(scopeEnumFromPrompt).map(function ([
-          scope,
-          meta,
-        ]): Item {
-          return {
-            label: scope,
+    // Preserve the existing precedence of commitlint prompt metadata and scope rules.
+    const presetItems: Item[] =
+      scopeEnumFromPrompt && Object.keys(scopeEnumFromPrompt).length
+        ? Object.entries(scopeEnumFromPrompt).map(([label, meta]) => ({
+            label,
             description: meta.title || '',
             detail: meta.description || '',
-          };
-        }),
-        noneItem,
-      };
-    }
-
-    // Fallback to commitlint scope-enum
-    if (scopeEnum.length) {
+          }))
+        : scopeEnum.map((label) => ({
+            label,
+            detail: getPromptLocalize('type.fromCommitlintConfig'),
+          }));
+    if (presetItems.length && !suggestedScope)
       return {
         type: PROMPT_TYPES.QUICK_PICK,
         name,
         placeholder,
-        items: scopeEnum.map(function (scope): Item {
-          return {
-            label: scope,
-            description: '',
-            detail: getPromptLocalize('type.fromCommitlintConfig'),
-          };
-        }),
+        items: presetItems,
         noneItem,
       };
-    }
 
     return {
       type: PROMPT_TYPES.CONFIGURABLE_QUICK_PICK,
       name,
       placeholder,
+      suggestedScope,
+      items: presetItems.length ? presetItems : undefined,
       configurationKey: keys.SCOPES as keyof configuration.Configuration,
       newItem: {
         label: getPromptLocalize('scope.newItem.label'),
@@ -358,7 +346,7 @@ export default async function prompts({
   ]
     .filter(function (question) {
       if (question.name === 'scope' && !promptScopes) return false;
-      
+
       if (question.name === 'tag' && !promptTag) return false;
 
       if (question.name === 'gitmoji' && !gitmoji) return false;

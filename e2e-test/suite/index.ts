@@ -20,7 +20,8 @@ export async function run(): Promise<void> {
   const testsRoot = __dirname;
   const files = await glob('**/*.test.js', { cwd: testsRoot });
 
-  for (const file of files) {
+  // The command suite installs its output listener before the first activation.
+  for (const file of files.sort()) {
     mocha.addFile(path.resolve(testsRoot, file));
   }
 

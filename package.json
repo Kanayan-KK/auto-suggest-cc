@@ -1,9 +1,9 @@
 {
-  "name": "vscode-conventional-commits",
+  "name": "auto-suggest-cc",
   "displayName": "%extension.name%",
-  "description": "💬Conventional Commits for VSCode.",
+  "description": "Conventional Commits with scope suggestions from changed files.",
   "icon": "assets/icon.png",
-  "publisher": "vivaxy",
+  "publisher": "Kanayan-KK",
   "version": "1.31.0",
   "engines": {
     "vscode": "^1.44.0"
@@ -23,24 +23,24 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/vivaxy/vscode-conventional-commits.git"
+    "url": "https://github.com/Kanayan-KK/auto-suggest-cc.git"
   },
   "author": "vivaxy",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/vivaxy/vscode-conventional-commits/issues"
+    "url": "https://github.com/Kanayan-KK/auto-suggest-cc/issues"
   },
-  "homepage": "https://github.com/vivaxy/vscode-conventional-commits",
+  "homepage": "https://github.com/Kanayan-KK/auto-suggest-cc",
   "activationEvents": [
-    "onCommand:extension.conventionalCommits",
-    "onCommand:extension.conventionalCommits.resetGlobalState",
-    "onCommand:extension.conventionalCommits.showNewVersionNotes"
+    "onCommand:autoSuggestCC.createCommit",
+    "onCommand:autoSuggestCC.createCommit.resetGlobalState",
+    "onCommand:autoSuggestCC.createCommit.showNewVersionNotes"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "extension.conventionalCommits",
+        "command": "autoSuggestCC.createCommit",
         "title": "%extension.name%",
         "icon": {
           "dark": "./assets/menu-icon-dark.svg",
@@ -48,11 +48,11 @@
         }
       },
       {
-        "command": "extension.conventionalCommits.resetGlobalState",
+        "command": "autoSuggestCC.createCommit.resetGlobalState",
         "title": "%extension.commands.resetGlobalState%"
       },
       {
-        "command": "extension.conventionalCommits.showNewVersionNotes",
+        "command": "autoSuggestCC.createCommit.showNewVersionNotes",
         "title": "%extension.commands.showNewVersionNotes%"
       }
     ],
@@ -60,7 +60,7 @@
       "scm/title": [
         {
           "when": "scmProvider == git",
-          "command": "extension.conventionalCommits",
+          "command": "autoSuggestCC.createCommit",
           "group": "navigation"
         }
       ]
@@ -125,6 +125,16 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%extension.configuration.promptFooter.markdownDescription%"
+        },
+        "conventionalCommits.defaultScopeMode": {
+          "type": "string",
+          "scope": "resource",
+          "enum": [
+            "fromChangedFiles",
+            "disabled"
+          ],
+          "default": "fromChangedFiles",
+          "description": "Suggest a commit scope from the paths of the files being committed."
         },
         "conventionalCommits.promptScopes": {
           "type": "boolean",
