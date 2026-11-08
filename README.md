@@ -1,4 +1,2 @@
-この拡張機能は、設定 `conventionalCommits.defaultScopeMode` が初期値の
-`fromChangedFiles`
-のとき、コミット対象の全ファイルに共通するスコープを自動提案し、`disabled`
-のときは自動提案を無効にします。
+この拡張機能は、コミット対象のファイルから種別とスコープを提案し、確定した種別に合う絵文字を初期選択します（スコープの自動提案は
+`conventionalCommits.defaultScopeMode` を `disabled` にすると無効になります）。

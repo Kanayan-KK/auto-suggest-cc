@@ -45,17 +45,21 @@ suite('suggested scope in a selected repository', () => {
     scope: string,
     answers: PromptAnswer[] = [acceptDefault],
   ) {
+    await checkMessage(
+      ['feat', ...answers, 'test scope'],
+      scope ? `feat(${scope}): test scope` : 'feat: test scope',
+    );
+  }
+
+  async function checkMessage(answers: PromptAnswer[], expected: string) {
     await repo.status();
-    const stubs = installPromptStubs(['feat', ...answers, 'test scope']);
+    const stubs = installPromptStubs(answers);
     try {
       await vscode.commands.executeCommand(
         'autoSuggestCC.createCommit',
         repo.rootUri,
       );
-      assert.strictEqual(
-        repo.inputBox.value,
-        scope ? `feat(${scope}): test scope` : 'feat: test scope',
-      );
+      assert.strictEqual(repo.inputBox.value, expected);
       assert.strictEqual(stubs.remaining(), 0);
     } finally {
       stubs.dispose();
@@ -133,6 +137,68 @@ suite('suggested scope in a selected repository', () => {
     await configure('conventionalCommits.defaultScopeMode', 'disabled');
     await check('');
     await configure('conventionalCommits.defaultScopeMode', 'fromChangedFiles');
+  });
+
+  test('suggests a type and an emoji and preserves manual choices on Back', async () => {
+    write('docs/guide.md');
+    git('add', 'docs');
+    await configure('conventionalCommits.gitmoji', true);
+    await configure('conventionalCommits.promptScopes', false);
+    try {
+      await checkMessage(
+        [acceptDefault, acceptDefault, 'guide'],
+        'docs: :memo: guide',
+      );
+      const revisit: PromptAnswer[] = [
+        goBack,
+        goBack,
+        'perf',
+        acceptDefault,
+        'guide',
+      ];
+      await checkMessage(
+        [acceptDefault, acceptDefault, ...revisit],
+        'perf: :zap: guide',
+      );
+      await checkMessage([acceptDefault, '', ...revisit], 'perf: guide');
+      await checkMessage(
+        [acceptDefault, ':lock:', ...revisit],
+        'perf: :lock: guide',
+      );
+      await configure('conventionalCommits.emojiFormat', 'emoji');
+      await checkMessage(
+        ['revert', acceptDefault, 'guide'],
+        'revert: ⏪️ guide',
+      );
+    } finally {
+      await configure('conventionalCommits.gitmoji', false);
+      await configure('conventionalCommits.promptScopes', true);
+      await configure('conventionalCommits.emojiFormat', 'code');
+    }
+  });
+
+  test('requires a valid type and nonblank subject even when an emoji is present', async () => {
+    write('src/file.ts');
+    git('add', 'src');
+    fs.writeFileSync(
+      path.join(root, '.commitlintrc.json'),
+      JSON.stringify({
+        rules: { 'type-enum': [2, 'always', ['internal', 'fix']] },
+      }),
+    );
+    await configure('conventionalCommits.gitmoji', true);
+    try {
+      await checkMessage(
+        [acceptDefault, 'fix', acceptDefault, acceptDefault, '   ', 'repair'],
+        'fix(src): :bug: repair',
+      );
+      await checkMessage(
+        ['internal', acceptDefault, acceptDefault, 'maintain'],
+        'internal(src): maintain',
+      );
+    } finally {
+      await configure('conventionalCommits.gitmoji', false);
+    }
   });
 
   test('rejects a suggestion disallowed by commitlint', async () => {

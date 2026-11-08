@@ -1,4 +1,6 @@
 {
+  "extension.sources.prompt.type.choose": "请选择提交类型",
+  "extension.sources.prompt.subject.required": "请输入提交主题。",
   "extension.name": "Auto Suggest CC",
   "extension.commands.resetGlobalState": "Auto Suggest CC: 重置全局状态",
   "extension.commands.showNewVersionNotes": "Auto Suggest CC: 显示版本提示",

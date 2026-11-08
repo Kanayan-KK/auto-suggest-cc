@@ -1,4 +1,6 @@
 {
+  "extension.sources.prompt.type.choose": "Bir commit türü seçin",
+  "extension.sources.prompt.subject.required": "Bir commit başlığı girin.",
   "extension.name": "Auto Suggest CC",
   "extension.commands.resetGlobalState": "Auto Suggest CC: Genel Durumu Sıfırla",
   "extension.commands.showNewVersionNotes": "Auto Suggest CC: Sürüm Notlarını Göster",

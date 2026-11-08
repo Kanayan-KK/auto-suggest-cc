@@ -1,4 +1,6 @@
 {
+  "extension.sources.prompt.type.choose": "Select a commit type",
+  "extension.sources.prompt.subject.required": "Enter a commit subject.",
   "extension.name": "Auto Suggest CC",
   "extension.commands.resetGlobalState": "Auto Suggest CC: Reset Global State",
   "extension.commands.showNewVersionNotes": "Auto Suggest CC: Show Version Notes",

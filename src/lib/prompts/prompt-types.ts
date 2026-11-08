@@ -15,6 +15,7 @@ export enum PROMPT_TYPES {
 }
 
 export type Item = {
+  code?: string;
   label: string;
   detail?: string;
   description?: string;
@@ -27,7 +28,11 @@ export type Prompt = { name: string; type: PROMPT_TYPES } & Options &
   Partial<InputBoxOptions> &
   Partial<ConfigurableQuickPickOptions>;
 
-export type PromptStatus = { value: string; activeItems: Item[] };
+export type PromptStatus = {
+  value: string;
+  activeItems: Item[];
+  selectionChanged?: boolean;
+};
 
 type Options = {
   placeholder: string;
@@ -39,6 +44,8 @@ type Options = {
 };
 
 type QuickPickOptions = {
+  blockedItem?: Item;
+  trackSelection?: boolean;
   items: Item[];
   activeItems: Item[];
   noneItem?: Item;
@@ -46,6 +53,8 @@ type QuickPickOptions = {
 
 async function createQuickPick({
   placeholder,
+  blockedItem,
+  trackSelection,
   items = [],
   activeItems = [],
   value,
@@ -59,6 +68,8 @@ async function createQuickPick({
   }
   const promptStatus: PromptStatus = await createSimpleQuickPick<Item>({
     placeholder,
+    blockedItem,
+    trackSelection,
     matchOnDescription: true,
     matchOnDetail: true,
     ignoreFocusOut: true,
@@ -135,6 +146,7 @@ function createInputBox({
           button: e,
           value: input.value,
         });
+        input.dispose();
       }
     });
     input.prompt = placeholder;
@@ -160,6 +172,7 @@ async function createConfigurableQuickPick({
   configurationKey,
   suggestedScope,
   items: presetItems,
+  blockedItem,
   newItem,
   noneItem,
   activeItems = [],
@@ -174,13 +187,15 @@ async function createConfigurableQuickPick({
     detail: localize('extension.sources.prompt.fromWorkspaceConfiguration'),
   };
   const items: Item[] =
-    presetItems?.slice() ??
-    currentValues.map(function (value) {
-      return {
-        label: value,
-        ...workspaceConfigurationItemInfo,
-      };
-    });
+    presetItems?.filter((item) => !validate(item.label)) ??
+    currentValues
+      .filter((value) => !validate(value))
+      .map(function (value) {
+        return {
+          label: value,
+          ...workspaceConfigurationItemInfo,
+        };
+      });
   // Select an existing candidate when possible. A generated item is never persisted.
   if (suggestedScope) {
     let suggestion = items.find((item) => item.label === suggestedScope);
@@ -215,6 +230,7 @@ async function createConfigurableQuickPick({
   }
 
   let promptStatus = await createQuickPick({
+    blockedItem,
     placeholder,
     items,
     activeItems,

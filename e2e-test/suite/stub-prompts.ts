@@ -191,6 +191,7 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
               : resolveActiveItem(items, answer);
           if (active) {
             picker.activeItems = [active] as unknown as readonly T[];
+            changeActiveEvt.fire([active]);
           }
           // The production handler reads `picker.value` for free-text.
           // Most QuickPick steps don't use it, but `CONFIGURABLE_QUICK_PICK`
@@ -205,6 +206,7 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
             step: picker.step,
           });
           acceptEvt.fire();
+          if (!disposed) picker.show();
         });
       },
       hide() {
@@ -264,6 +266,7 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
             step: input.step,
           });
           acceptEvt.fire();
+          if (!disposed) input.show();
         });
       },
       hide() {

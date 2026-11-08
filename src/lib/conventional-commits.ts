@@ -6,7 +6,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import * as VSCodeGit from '../vendors/git';
 import prompts from './prompts';
-import { scopeFromFiles } from './scope-default';
+import { scopeFromFiles, typeFromFiles } from './scope-default';
 import * as configuration from './configuration';
 import * as output from './output';
 import commitlint from './commitlint';
@@ -32,20 +32,19 @@ function hasChanges(repo: VSCodeGit.Repository) {
   );
 }
 
-function getSuggestedScope(repository: VSCodeGit.Repository) {
+function getFileSuggestions(repository: VSCodeGit.Repository) {
   const root = repository.rootUri;
   const mode = vscode.workspace
     .getConfiguration('conventionalCommits', root)
     .get('defaultScopeMode');
-  if (mode !== 'fromChangedFiles') return undefined;
 
   // A staged commit ignores unstaged files. Unresolved merges cannot be committed.
   const state = repository.state;
-  if (state.mergeChanges.length) return undefined;
+  if (state.mergeChanges.length) return {};
   let changes = state.indexChanges;
   if (!changes.length) {
     const git = vscode.workspace.getConfiguration('git', root);
-    if (!git.get<boolean>('enableSmartCommit')) return undefined;
+    if (!git.get<boolean>('enableSmartCommit')) return {};
     // VS Code commits only tracked changes when untracked files are separate or hidden.
     const trackedOnly =
       git.get<string>('smartCommitChanges', 'all') === 'tracked' ||
@@ -58,11 +57,15 @@ function getSuggestedScope(repository: VSCodeGit.Repository) {
   }
 
   // The Git API supplies the destination URI for a staged rename.
-  const scope = scopeFromFiles(
-    root.fsPath,
-    changes.map((change) => change.uri.fsPath),
-  );
-  return scope && !commitlint.lintScope(scope) ? scope : undefined;
+  const files = changes.map((change) => change.uri.fsPath);
+  const scope =
+    mode === 'fromChangedFiles'
+      ? scopeFromFiles(root.fsPath, files)
+      : undefined;
+  return {
+    suggestedType: typeFromFiles(root.fsPath, files),
+    suggestedScope: scope && !commitlint.lintScope(scope) ? scope : undefined,
+  };
 }
 
 async function getRepository({
@@ -185,7 +188,7 @@ export default function createConventionalCommits() {
         emojiFormat:
           configuration.get<configuration.EMOJI_FORMAT>('emojiFormat'),
         lineBreak: configuration.get<string>('lineBreak'),
-        suggestedScope: getSuggestedScope(repository),
+        ...getFileSuggestions(repository),
         promptScopes: configuration.get<boolean>('promptScopes'),
         promptBody: configuration.get<boolean>('promptBody'),
         promptFooter: configuration.get<boolean>('promptFooter'),
