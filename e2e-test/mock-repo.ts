@@ -53,8 +53,17 @@ export function createMockRepo(): MockRepo {
   // commitlint to resolve shareable configs from (for example
   // @commitlint/config-conventional in issue #401). Symlink instead of copy so
   // the mock repo stays cheap to create.
-  fs.symlinkSync(workspaceNodeModulesPath, path.join(repoPath, 'node_modules'));
+  fs.symlinkSync(
+    workspaceNodeModulesPath,
+    path.join(repoPath, 'node_modules'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  );
 
+  // Exclude the dependency junction from Git's Windows working tree scan.
+  fs.appendFileSync(
+    path.join(repoPath, '.git', 'info', 'exclude'),
+    '\n/node_modules/\n',
+  );
   git(repoPath, ['add', 'README.md']);
   git(repoPath, ['commit', '-m', 'chore: initial']);
 

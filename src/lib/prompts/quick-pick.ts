@@ -10,6 +10,8 @@ export const confirmButton: vscode.QuickInputButton = {
 };
 
 export default function createQuickPick<T extends vscode.QuickPickItem>({
+  blockedItem,
+  trackSelection,
   placeholder,
   items = [],
   activeItems = [],
@@ -17,12 +19,16 @@ export default function createQuickPick<T extends vscode.QuickPickItem>({
   step,
   totalSteps,
   buttons = [],
-}: Partial<vscode.QuickPick<T>>): Promise<{
+}: Partial<vscode.QuickPick<T>> & {
+  blockedItem?: T;
+  trackSelection?: boolean;
+}): Promise<{
   value: string;
+  selectionChanged?: boolean;
   activeItems: T[];
 }> {
   return new Promise(function (resolve, reject) {
-    const picker = vscode.window.createQuickPick();
+    const picker = vscode.window.createQuickPick<T>();
     picker.placeholder = placeholder;
     picker.matchOnDescription = true;
     picker.matchOnDetail = true;
@@ -32,40 +38,34 @@ export default function createQuickPick<T extends vscode.QuickPickItem>({
     picker.value = value;
     picker.step = step;
     picker.totalSteps = totalSteps;
-    picker.show();
-    picker.buttons = [...buttons, confirmButton];
-    picker.onDidAccept(function () {
-      if (picker.activeItems.length) {
-        resolve({
-          value: picker.value,
-          activeItems: picker.activeItems as T[],
-        });
-        picker.dispose();
-      }
-    });
-    picker.onDidTriggerButton(function (e) {
-      if (e === confirmButton) {
-        if (picker.activeItems.length) {
-          resolve({
-            value: picker.value,
-            activeItems: picker.activeItems as T[],
-          });
-        } else {
-          resolve({
-            value: picker.value,
-            activeItems: [picker.items[0]] as T[],
-          });
-        }
-        picker.dispose();
-      }
+    const initialItem = activeItems[0] ?? items[0];
+    let selectionChanged = false;
+    if (trackSelection)
+      picker.onDidChangeActive(([item]) => {
+        if (item && item !== initialItem) selectionChanged = true;
+      });
 
-      if (e === vscode.QuickInputButtons.Back) {
+    function accept(item?: T) {
+      if (!item || item === blockedItem) return;
+      resolve({ value: picker.value, activeItems: [item], selectionChanged });
+      picker.dispose();
+    }
+
+    picker.buttons = [...buttons, confirmButton];
+    picker.onDidAccept(() => accept(picker.activeItems[0]));
+    picker.onDidTriggerButton((button) => {
+      if (button === confirmButton)
+        accept(picker.activeItems[0] ?? picker.items[0]);
+      if (button === vscode.QuickInputButtons.Back) {
         reject({
-          button: e,
+          button,
           value: picker.value,
           activeItems: picker.activeItems,
+          selectionChanged,
         });
+        picker.dispose();
       }
     });
+    picker.show();
   });
 }

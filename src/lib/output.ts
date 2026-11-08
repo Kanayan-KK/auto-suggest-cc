@@ -10,7 +10,7 @@ import * as configuration from './configuration';
 let output: vscode.OutputChannel;
 
 export function initialize() {
-  output = vscode.window.createOutputChannel('Conventional Commits');
+  output = vscode.window.createOutputChannel('Auto Suggest CC');
 }
 
 export function appendLine(message: string) {
@@ -81,7 +81,7 @@ export async function showNewVersionNotes(
     const showReleaseNotes = getSourcesLocalize('output.showReleaseNotes');
     const dontShowThisAgain = getSourcesLocalize('output.dontShowThisAgain');
     const changelog = vscode.Uri.parse(
-      'https://github.com/vivaxy/vscode-conventional-commits/blob/master/CHANGELOG.md',
+      'https://github.com/Kanayan-KK/auto-suggest-cc/blob/master/CHANGELOG.md',
     );
     if (lastUsedVersion != currentVersion || force) {
       const title = localize('extension.name');

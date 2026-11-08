@@ -5,4 +5,4 @@
 export const PREFIX = 'conventionalCommits';
 export const SCOPES = 'scopes';
 export const TAGS = 'tags';
-export const ID = 'vivaxy.vscode-conventional-commits';
+export const ID = 'Kanayan-KK.auto-suggest-cc';

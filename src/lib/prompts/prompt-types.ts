@@ -15,6 +15,7 @@ export enum PROMPT_TYPES {
 }
 
 export type Item = {
+  code?: string;
   label: string;
   detail?: string;
   description?: string;
@@ -27,7 +28,11 @@ export type Prompt = { name: string; type: PROMPT_TYPES } & Options &
   Partial<InputBoxOptions> &
   Partial<ConfigurableQuickPickOptions>;
 
-export type PromptStatus = { value: string; activeItems: Item[] };
+export type PromptStatus = {
+  value: string;
+  activeItems: Item[];
+  selectionChanged?: boolean;
+};
 
 type Options = {
   placeholder: string;
@@ -39,6 +44,8 @@ type Options = {
 };
 
 type QuickPickOptions = {
+  blockedItem?: Item;
+  trackSelection?: boolean;
   items: Item[];
   activeItems: Item[];
   noneItem?: Item;
@@ -46,6 +53,8 @@ type QuickPickOptions = {
 
 async function createQuickPick({
   placeholder,
+  blockedItem,
+  trackSelection,
   items = [],
   activeItems = [],
   value,
@@ -59,6 +68,8 @@ async function createQuickPick({
   }
   const promptStatus: PromptStatus = await createSimpleQuickPick<Item>({
     placeholder,
+    blockedItem,
+    trackSelection,
     matchOnDescription: true,
     matchOnDetail: true,
     ignoreFocusOut: true,
@@ -135,6 +146,7 @@ function createInputBox({
           button: e,
           value: input.value,
         });
+        input.dispose();
       }
     });
     input.prompt = placeholder;
@@ -143,6 +155,7 @@ function createInputBox({
 }
 
 export type ConfigurableQuickPickOptions = {
+  suggestedScope?: string;
   configurationKey: keyof configuration.Configuration;
   newItem: Item;
   newItemWithoutSetting: Item;
@@ -157,6 +170,9 @@ async function createConfigurableQuickPick({
   step,
   totalSteps,
   configurationKey,
+  suggestedScope,
+  items: presetItems,
+  blockedItem,
   newItem,
   noneItem,
   activeItems = [],
@@ -170,13 +186,26 @@ async function createConfigurableQuickPick({
     description: '',
     detail: localize('extension.sources.prompt.fromWorkspaceConfiguration'),
   };
-  const items: Item[] = currentValues.map(function (value) {
-    return {
-      label: value,
-      ...workspaceConfigurationItemInfo,
-    };
-  });
-  items.push(newItem);
+  const items: Item[] =
+    presetItems?.filter((item) => !validate(item.label)) ??
+    currentValues
+      .filter((value) => !validate(value))
+      .map(function (value) {
+        return {
+          label: value,
+          ...workspaceConfigurationItemInfo,
+        };
+      });
+  // Select an existing candidate when possible. A generated item is never persisted.
+  if (suggestedScope) {
+    let suggestion = items.find((item) => item.label === suggestedScope);
+    if (!suggestion) {
+      suggestion = { label: suggestedScope };
+      items.unshift(suggestion);
+    }
+    if (!activeItems.length) activeItems = [suggestion];
+  }
+  if (!presetItems) items.push(newItem);
   items.push(newItemWithoutSetting);
 
   // If activeItems[0] is contained in items, then make activeItems[0] the activeItems[0] contained in items.
@@ -201,19 +230,17 @@ async function createConfigurableQuickPick({
   }
 
   let promptStatus = await createQuickPick({
+    blockedItem,
     placeholder,
     items,
     activeItems,
-    value,
+    value: activeItems[0] === newItemWithoutSetting ? '' : value,
     step,
     totalSteps,
     noneItem,
     buttons,
   });
-  if (
-    promptStatus.activeItems[0] &&
-    promptStatus.activeItems[0].label === newItem.label
-  ) {
+  if (promptStatus.activeItems[0] === newItem) {
     const newItemInputStatus = await createInputBox({
       placeholder: newItem.placeholder ?? '',
       value: promptStatus.value,
@@ -237,15 +264,15 @@ async function createConfigurableQuickPick({
       ];
     }
   }
-  if (
-    promptStatus.activeItems[0] &&
-    promptStatus.activeItems[0].label === newItemWithoutSetting.label
-  ) {
+  if (promptStatus.activeItems[0] === newItemWithoutSetting) {
     promptStatus = {
       value: (
         await createInputBox({
           placeholder: newItemWithoutSetting.placeholder ?? '',
-          value: promptStatus.value,
+          value:
+            activeItems[0] === newItemWithoutSetting
+              ? value
+              : promptStatus.value,
           step,
           totalSteps,
           validate,

@@ -18,7 +18,7 @@ export default async function openMessageInTab(
 ) {
   state.repository = repository;
   const uri = vscode.Uri.file('COMMIT_EDITMSG').with({
-    scheme: 'commit-message',
+    scheme: 'auto-suggest-cc-message',
   });
   await vscode.commands.executeCommand('vscode.open', uri);
 }

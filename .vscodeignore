@@ -1,6 +1,8 @@
 .vscode/
 node_modules/
 out/
+e2e-test/
+.vscode-test/
 src/
 tsconfig.json
 webpack.config.js

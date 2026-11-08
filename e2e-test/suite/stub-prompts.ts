@@ -10,7 +10,9 @@ import * as vscode from 'vscode';
  * - For an `InputBox` step: the value becomes `input.value` before
  *   `onDidAccept` fires.
  */
-export type PromptAnswer = string;
+export const acceptDefault = Symbol('accept current item');
+export const goBack = Symbol('press Back');
+export type PromptAnswer = string | typeof acceptDefault | typeof goBack;
 
 /**
  * Captured state from a single prompt step. Exposed primarily so the e2e
@@ -127,13 +129,13 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
   const originalCreateQuickPick = win.createQuickPick;
   const originalCreateInputBox = win.createInputBox;
 
-  function nextAnswer(role: string): string {
+  function nextAnswer(role: string): PromptAnswer {
     if (queue.length === 0) {
       throw new Error(
         `installPromptStubs: ran out of scripted answers (next requested by ${role}).`,
       );
     }
-    return queue.shift() as string;
+    return queue.shift()!;
   }
 
   function fakeQuickPick<
@@ -181,9 +183,15 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
           if (disposed) return;
           const answer = nextAnswer('createQuickPick');
           const items = picker.items as readonly T[];
-          const active = resolveActiveItem(items, answer);
+          if (answer === goBack)
+            return buttonEvt.fire(vscode.QuickInputButtons.Back);
+          const active =
+            answer === acceptDefault
+              ? picker.activeItems[0]
+              : resolveActiveItem(items, answer);
           if (active) {
             picker.activeItems = [active] as unknown as readonly T[];
+            changeActiveEvt.fire([active]);
           }
           // The production handler reads `picker.value` for free-text.
           // Most QuickPick steps don't use it, but `CONFIGURABLE_QUICK_PICK`
@@ -198,6 +206,7 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
             step: picker.step,
           });
           acceptEvt.fire();
+          if (!disposed) picker.show();
         });
       },
       hide() {
@@ -243,7 +252,9 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
         setImmediate(() => {
           if (disposed) return;
           const answer = nextAnswer('createInputBox');
-          input.value = answer;
+          if (answer === goBack)
+            return buttonEvt.fire(vscode.QuickInputButtons.Back);
+          if (answer !== acceptDefault) input.value = answer;
           // Production code calls `validate(input.value)` inside
           // `onDidChangeValue`; replay that contract so any validator
           // still sees the new value before accept fires.
@@ -255,6 +266,7 @@ export function installPromptStubs(answers: PromptAnswer[]): PromptStubs {
             step: input.step,
           });
           acceptEvt.fire();
+          if (!disposed) input.show();
         });
       },
       hide() {

@@ -2,32 +2,18 @@
  * @since 2020-03-25 09:09
  * @author vivaxy
  */
-import getTypesByLocale from '@yi-xu-0100/conventional-commit-types-i18n';
-const gitmojis: {
-  gitmojis: {
-    emoji: string;
-    entity: string;
-    code: string;
-    description: string;
-    name: string;
-  }[];
-} = require('../vendors/gitmojis.json');
-
+import { getTypeItems, getScopePrompt, getTagPrompt } from './prompts/choices';
+import { gitmojiItems } from './prompts/gitmoji';
+import { runPrompts } from './prompts/run';
 import * as configuration from './configuration';
-import promptTypes, {
-  PROMPT_TYPES,
-  Item,
-  Prompt,
-  PromptStatus,
-} from './prompts/prompt-types';
-import * as keys from '../configs/keys';
+import { PROMPT_TYPES, Prompt } from './prompts/prompt-types';
 import {
   CommitMessage,
   serializeSubject,
   serializeHeader,
 } from './commit-message';
 import commitlint from './commitlint';
-import { getPromptLocalize, locale } from './localize';
+import { getPromptLocalize } from './localize';
 import { QuickInputButtons } from 'vscode';
 import { UserPromptConfig } from '@commitlint/types/lib/prompt';
 
@@ -36,6 +22,8 @@ export default async function prompts({
   showEditor,
   emojiFormat,
   lineBreak,
+  suggestedType,
+  suggestedScope,
   promptScopes,
   promptBody,
   promptFooter,
@@ -47,6 +35,8 @@ export default async function prompts({
   showEditor: boolean;
   emojiFormat: configuration.EMOJI_FORMAT;
   lineBreak: string;
+  suggestedType?: string;
+  suggestedScope?: string;
   promptScopes: boolean;
   promptBody: boolean;
   promptFooter: boolean;
@@ -55,7 +45,6 @@ export default async function prompts({
   promptConfig?: UserPromptConfig;
 }): Promise<CommitMessage> {
   const commitMessage = new CommitMessage();
-  const conventionalCommitsTypes = getTypesByLocale(locale).types;
 
   function lineBreakFormatter(input: string): string {
     if (lineBreak) {
@@ -67,189 +56,31 @@ export default async function prompts({
     return input;
   }
 
-  function getTypeItems(): Item[] {
-    const typeEnum = commitlint.getTypeEnum();
-    const typeEnumFromPrompt = promptConfig?.questions?.type?.enum;
-
-    if (typeEnum.length === 0 && !typeEnumFromPrompt) {
-      return Object.keys(conventionalCommitsTypes).map(function (type) {
-        const { title, description } = conventionalCommitsTypes[type];
-        return {
-          label: type,
-          description: title,
-          detail: description,
-        };
-      });
-    }
-
-    // Use types from commitlint enum, or from prompt config enum, or conventional types
-    const allTypes = new Set<string>();
-    typeEnum.forEach((t) => allTypes.add(t));
-    if (typeEnumFromPrompt) {
-      Object.keys(typeEnumFromPrompt).forEach((t) => allTypes.add(t));
-    }
-    Object.keys(conventionalCommitsTypes).forEach((t) => allTypes.add(t));
-
-    return Array.from(allTypes).map(function (type) {
-      // Priority: prompt enum > conventional types > fallback
-      const promptMeta = typeEnumFromPrompt?.[type];
-      if (promptMeta) {
-        return {
-          label: type,
-          description: promptMeta.title || '',
-          detail: promptMeta.description || '',
-        };
-      }
-
-      if (type in conventionalCommitsTypes) {
-        const { description, title } = conventionalCommitsTypes[type];
-        return {
-          label: type,
-          description: title,
-          detail: description,
-        };
-      }
-
-      return {
-        label: type,
-        description: '',
-        detail: getPromptLocalize('type.fromCommitlintConfig'),
-      };
-    });
-  }
-
-  function getScopePrompt(): Omit<Prompt, 'step' | 'totalSteps'> {
-    const name = 'scope';
-    const placeholder = getPromptLocalize('scope.placeholder');
-    const scopeEnum = commitlint.getScopeEnum();
-    const scopeEnumFromPrompt = promptConfig?.questions?.scope?.enum;
-    const noneItem: Item = {
-      label: getPromptLocalize('scope.noneItem.label'),
-      description: '',
-      detail: getPromptLocalize('scope.noneItem.detail'),
-      alwaysShow: true,
-    };
-
-    // Use scopes from prompt config if available
-    if (scopeEnumFromPrompt && Object.keys(scopeEnumFromPrompt).length > 0) {
-      return {
-        type: PROMPT_TYPES.QUICK_PICK,
-        name,
-        placeholder,
-        items: Object.entries(scopeEnumFromPrompt).map(function ([
-          scope,
-          meta,
-        ]): Item {
-          return {
-            label: scope,
-            description: meta.title || '',
-            detail: meta.description || '',
-          };
-        }),
-        noneItem,
-      };
-    }
-
-    // Fallback to commitlint scope-enum
-    if (scopeEnum.length) {
-      return {
-        type: PROMPT_TYPES.QUICK_PICK,
-        name,
-        placeholder,
-        items: scopeEnum.map(function (scope): Item {
-          return {
-            label: scope,
-            description: '',
-            detail: getPromptLocalize('type.fromCommitlintConfig'),
-          };
-        }),
-        noneItem,
-      };
-    }
-
-    return {
-      type: PROMPT_TYPES.CONFIGURABLE_QUICK_PICK,
-      name,
-      placeholder,
-      configurationKey: keys.SCOPES as keyof configuration.Configuration,
-      newItem: {
-        label: getPromptLocalize('scope.newItem.label'),
-        description: '',
-        detail: getPromptLocalize('scope.newItem.detail'),
-        alwaysShow: true,
-        placeholder: getPromptLocalize('scope.newItem.placeholder'),
-      },
-      noneItem,
-      newItemWithoutSetting: {
-        label: getPromptLocalize('scope.newItemWithoutSetting.label'),
-        description: '',
-        detail: getPromptLocalize('scope.newItemWithoutSetting.detail'),
-        alwaysShow: true,
-        placeholder: getPromptLocalize('scope.newItem.placeholder'),
-      },
-      validate(input: string) {
-        return commitlint.lintScope(input);
-      },
-      storeGlobal: configuration.get<boolean>('storeScopesGlobally'),
-    };
-  }
-
-  function getTagPrompt(): Omit<Prompt, 'step' | 'totalSteps'> {
-    const name = 'tag';
-    const placeholder = getPromptLocalize('tag.placeholder');
-    const noneItem: Item = {
-      label: getPromptLocalize('tag.noneItem.label'),
-      description: '',
-      detail: getPromptLocalize('tag.noneItem.detail'),
-      alwaysShow: true,
-    };
-
-    return {
-      type: PROMPT_TYPES.CONFIGURABLE_QUICK_PICK,
-      name,
-      placeholder,
-      configurationKey: keys.TAGS as keyof configuration.Configuration,
-      newItem: {
-        label: getPromptLocalize('tag.newItem.label'),
-        description: '',
-        detail: getPromptLocalize('tag.newItem.detail'),
-        alwaysShow: true,
-        placeholder: getPromptLocalize('tag.newItem.placeholder'),
-      },
-      noneItem,
-      newItemWithoutSetting: {
-        label: getPromptLocalize('tag.newItemWithoutSetting.label'),
-        description: '',
-        detail: getPromptLocalize('tag.newItemWithoutSetting.detail'),
-        alwaysShow: true,
-        placeholder: getPromptLocalize('tag.newItem.placeholder'),
-      },
-      storeGlobal: configuration.get<boolean>('storeTagsGlobally'),
-    };
-  }
-
+  // Keep an unclassified change pending until the user chooses a valid type.
+  const typeItems = getTypeItems(promptConfig).filter(
+    (item) => !commitlint.lintType(item.label),
+  );
+  const initialType = typeItems.find((item) => item.label === suggestedType);
+  const chooseType = { label: getPromptLocalize('type.choose') };
   const questions: Prompt[] = [
     {
       type: PROMPT_TYPES.QUICK_PICK,
       name: 'type',
       placeholder: getPromptLocalize('type.placeholder'),
-      items: getTypeItems(),
+      items: initialType ? typeItems : [chooseType, ...typeItems],
+      activeItems: [initialType ?? chooseType],
+      blockedItem: chooseType,
       validate(input: string) {
         return commitlint.lintType(input);
       },
     },
-    getScopePrompt(),
+    getScopePrompt(suggestedScope, promptConfig),
     {
       type: PROMPT_TYPES.QUICK_PICK,
       name: 'gitmoji',
       placeholder: getPromptLocalize('gitmoji.placeholder'),
-      items: gitmojis.gitmojis.map(function ({ emoji, code, description }) {
-        return {
-          label: emojiFormat === 'code' ? code : emoji,
-          description: emojiFormat === 'code' ? emoji : code,
-          detail: description,
-        };
-      }),
+      items: gitmojiItems(emojiFormat),
+      trackSelection: true,
       noneItem: {
         label: getPromptLocalize('gitmoji.noneItem.label'),
         description: '',
@@ -283,6 +114,7 @@ export default async function prompts({
         promptConfig?.questions?.subject?.description ||
         getPromptLocalize('subject.placeholder'),
       validate(input: string) {
+        if (!input.trim()) return getPromptLocalize('subject.required');
         const { type, scope, gitmoji, ci, tag } = commitMessage;
         const serializedSubject = serializeSubject({
           gitmoji,
@@ -358,7 +190,7 @@ export default async function prompts({
   ]
     .filter(function (question) {
       if (question.name === 'scope' && !promptScopes) return false;
-      
+
       if (question.name === 'tag' && !promptTag) return false;
 
       if (question.name === 'gitmoji' && !gitmoji) return false;
@@ -384,87 +216,6 @@ export default async function prompts({
       };
     });
 
-  const promptStatuses: PromptStatus[] = new Array<PromptStatus>(
-    questions.length,
-  )
-    .fill({
-      value: '',
-      activeItems: [],
-    })
-    .map(() => ({
-      value: '',
-      activeItems: [],
-    }));
-
-  let index = 0;
-  while (index < questions.length) {
-    const activeItem = promptStatuses[index].activeItems[0];
-    if (questions[index].type === PROMPT_TYPES.QUICK_PICK) {
-      if (activeItem) {
-        questions[index].activeItems = [activeItem];
-      }
-    } else if (questions[index].type === PROMPT_TYPES.CONFIGURABLE_QUICK_PICK) {
-      if (activeItem) {
-        questions[index].activeItems = [activeItem];
-        if (questions[index].newItemWithoutSetting) {
-          if (activeItem === questions[index].newItemWithoutSetting) {
-            questions[index].value = promptStatuses[index].value;
-          } else {
-            questions[index].value = '';
-          }
-        }
-      }
-    } else {
-      questions[index].value = promptStatuses[index].value;
-    }
-
-    try {
-      promptStatuses[index] = await promptTypes[questions[index].type](
-        // @ts-ignore
-        questions[index],
-      );
-    } catch (e) {
-      if (e && 'button' in e) {
-        if (e.button === QuickInputButtons.Back) {
-          promptStatuses[index] = {
-            value: 'value' in e ? e.value : promptStatuses[index].value,
-            activeItems:
-              'activeItems' in e
-                ? e.activeItems
-                : promptStatuses[index].activeItems,
-          };
-          index -= 1;
-          continue;
-        } else {
-          throw e;
-        }
-      } else {
-        throw e;
-      }
-    }
-
-    index += 1;
-  }
-
-  promptStatuses
-    .map((p, index) => {
-      const activeItem = p.activeItems[0];
-      if (!activeItem) return p.value;
-      if (questions[index].noneItem && activeItem === questions[index].noneItem)
-        return '';
-      if (questions[index].newItem && activeItem === questions[index].newItem)
-        return p.value;
-      if (
-        questions[index].newItemWithoutSetting &&
-        activeItem === questions[index].newItemWithoutSetting
-      )
-        return p.value;
-      return activeItem.label;
-    })
-    .forEach((value, index) => {
-      commitMessage[questions[index].name as keyof CommitMessage] =
-        questions[index].format?.(value) ?? value;
-    });
-
+  await runPrompts(questions, commitMessage);
   return commitMessage;
 }
