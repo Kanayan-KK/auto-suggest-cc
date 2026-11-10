@@ -9,6 +9,11 @@ const gitmojis: {
   }[];
 } = require('../../vendors/gitmojis.json');
 
+const japaneseDescriptions: Record<
+  string,
+  string
+> = require('../../vendors/gitmojis.ja.json');
+
 const codesByType = new Map(
   Object.entries({
     feat: ':sparkles:',
@@ -25,11 +30,17 @@ const codesByType = new Map(
   }),
 );
 
-export function gitmojiItems(format: 'code' | 'emoji'): Item[] {
-  return gitmojis.gitmojis.map(({ emoji, code, description }) => ({
+export function gitmojiItems(
+  format: 'code' | 'emoji',
+  language = 'en',
+): Item[] {
+  return gitmojis.gitmojis.map(({ emoji, code, description, name }) => ({
     label: format === 'code' ? code : emoji,
     description: format === 'code' ? emoji : code,
-    detail: description,
+    detail:
+      language === 'ja'
+        ? (japaneseDescriptions[name] ?? description)
+        : description,
     code,
   }));
 }

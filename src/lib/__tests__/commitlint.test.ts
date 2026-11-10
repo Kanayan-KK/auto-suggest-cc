@@ -7,6 +7,12 @@ import * as path from 'path';
 import commitlint from '../commitlint';
 import * as output from '../output';
 
+vi.mock('../localize', () => ({
+  locale: 'en',
+  getSourcesLocalize: (key: string) =>
+    require('../../../package.nls.json')[`extension.sources.${key}`],
+}));
+
 vi.mock('../output', function () {
   return {
     info: vi.fn(),

@@ -19,6 +19,7 @@ type Commit = {
   footer?: string | null;
 };
 import * as output from './output';
+import { getSourcesLocalize, locale } from './localize';
 
 // `ERR_PACKAGE_PATH_NOT_EXPORTED` is Node's stable error code (not just a
 // message string) for a `require()` resolution hitting a package.json
@@ -32,18 +33,13 @@ function formatUnexportedPackageError(e: NodeJS.ErrnoException): string {
   const match = e.message.match(/[\\/]([^\\/]+)[\\/]package\.json$/);
   const packageName = match ? match[1] : undefined;
   if (packageName === 'conventional-changelog-conventionalcommits') {
-    return (
-      `commitlint: "conventional-changelog-conventionalcommits" ships an ESM-only "exports" field ` +
-      `(no "require"/"default" condition), so Node cannot load it here. This is a known upstream ` +
-      `commitlint issue (https://github.com/conventional-changelog/commitlint/issues/4864) with no fix yet. ` +
-      `Workaround: pin "conventional-changelog-conventionalcommits" to "9.3.1" in your project, e.g. via ` +
-      `"resolutions" in package.json (Yarn) or "overrides" (npm).`
-    );
+    return getSourcesLocalize('error.parserPreset');
   }
-  return (
-    `commitlint: ${packageName ?? 'a commitlint config dependency'} ships an ESM-only "exports" field ` +
-    `(no "require"/"default" condition), so Node cannot load it here. Pinning that package to a version ` +
-    `with a CommonJS-compatible "exports" field should resolve this.`
+  const dependency =
+    packageName ?? getSourcesLocalize('error.configDependency');
+  return getSourcesLocalize('error.packageExports').replace(
+    '{package}',
+    () => dependency,
   );
 }
 
@@ -80,7 +76,12 @@ class Commitlint {
             output.error('commitlint', e);
           }
         } else {
-          output.error('commitlint', `Unknown error: ${e}`);
+          output.error(
+            'commitlint',
+            getSourcesLocalize('error.unknown').replace('{error}', () =>
+              String(e),
+            ),
+          );
         }
         return { rules: {}, prompt: undefined };
       }
@@ -123,7 +124,21 @@ class Commitlint {
     }
     // @ts-ignore
     const [valid, error] = rules[key](commit, condition, value);
-    return valid ? '' : error;
+    if (valid) return '';
+    if (locale !== 'ja') return error;
+
+    // Use the original rule result; localize only the explanation shown in the input box.
+    const [field, ...parts] = String(key).split('-');
+    const kind = parts.join('-');
+    const inverse = condition === 'never' && !kind.endsWith('length');
+    const template = getSourcesLocalize(
+      'validation.' + kind + (inverse ? '.never' : ''),
+    );
+    return template
+      .replace('{field}', getSourcesLocalize('validation.' + field))
+      .replace('{value}', () =>
+        typeof value === 'string' ? value : JSON.stringify(value),
+      );
   }
 
   private lintRules(commit: Commit, keys: (keyof RulesConfig)[]) {

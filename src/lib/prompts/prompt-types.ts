@@ -15,6 +15,7 @@ export enum PROMPT_TYPES {
 }
 
 export type Item = {
+  value?: string;
   code?: string;
   label: string;
   detail?: string;
@@ -230,6 +231,7 @@ async function createConfigurableQuickPick({
   }
 
   let promptStatus = await createQuickPick({
+    trackSelection: Boolean(suggestedScope),
     blockedItem,
     placeholder,
     items,

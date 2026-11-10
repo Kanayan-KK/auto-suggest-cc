@@ -43,7 +43,11 @@ export function error(
 export function extensionPackageJSON(id: string) {
   const packageJSON = vscode.extensions.getExtension(id)?.packageJSON;
   if (packageJSON === undefined) {
-    error('outputExtensionVersion', `Extension ${id} not found!`, true);
+    error(
+      'outputExtensionVersion',
+      getSourcesLocalize('error.extensionMissing').replace('{id}', () => id),
+      true,
+    );
   }
   return packageJSON;
 }

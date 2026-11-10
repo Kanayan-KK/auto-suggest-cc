@@ -1,62 +1,9 @@
-import getTypesByLocale from '@yi-xu-0100/conventional-commit-types-i18n';
 import type { UserPromptConfig } from '@commitlint/types/lib/prompt';
 import * as configuration from '../configuration';
-import { getPromptLocalize, locale } from '../localize';
+import { getPromptLocalize } from '../localize';
 import * as keys from '../../configs/keys';
 import commitlint from '../commitlint';
 import { PROMPT_TYPES, Item, Prompt } from './prompt-types';
-
-export function getTypeItems(promptConfig?: UserPromptConfig): Item[] {
-  const conventionalCommitsTypes = getTypesByLocale(locale).types;
-  const typeEnum = commitlint.getTypeEnum();
-  const typeEnumFromPrompt = promptConfig?.questions?.type?.enum;
-
-  if (typeEnum.length === 0 && !typeEnumFromPrompt) {
-    return Object.keys(conventionalCommitsTypes).map(function (type) {
-      const { title, description } = conventionalCommitsTypes[type];
-      return {
-        label: type,
-        description: title,
-        detail: description,
-      };
-    });
-  }
-
-  // Use types from commitlint enum, or from prompt config enum, or conventional types
-  const allTypes = new Set<string>();
-  typeEnum.forEach((t) => allTypes.add(t));
-  if (typeEnumFromPrompt) {
-    Object.keys(typeEnumFromPrompt).forEach((t) => allTypes.add(t));
-  }
-  Object.keys(conventionalCommitsTypes).forEach((t) => allTypes.add(t));
-
-  return Array.from(allTypes).map(function (type) {
-    // Priority: prompt enum > conventional types > fallback
-    const promptMeta = typeEnumFromPrompt?.[type];
-    if (promptMeta) {
-      return {
-        label: type,
-        description: promptMeta.title || '',
-        detail: promptMeta.description || '',
-      };
-    }
-
-    if (type in conventionalCommitsTypes) {
-      const { description, title } = conventionalCommitsTypes[type];
-      return {
-        label: type,
-        description: title,
-        detail: description,
-      };
-    }
-
-    return {
-      label: type,
-      description: '',
-      detail: getPromptLocalize('type.fromCommitlintConfig'),
-    };
-  });
-}
 
 export function getScopePrompt(
   suggestedScope?: string,

@@ -28,6 +28,8 @@ let defaultNLS: Record<string, string> = {};
 function getLocale() {
   const language = env.language;
   output.info('vscode.env.language: ' + language);
+  // VS Code may report a regional Japanese locale such as ja-JP.
+  if (language && /^ja(?:-|$)/i.test(language)) return 'ja';
   return language || DEFAULT_LOCALE;
 }
 
@@ -72,6 +74,18 @@ function getNLS(locale: string = '') {
 
 export function getPromptLocalize(key: string) {
   return localize(`extension.sources.prompt.${key}`);
+}
+
+export function getPromptPlaceholder(field: string, configured?: string) {
+  const key = `extension.sources.prompt.${field}.placeholder`;
+  // The conventional preset omits the final period in the stock English prompt.
+  if (
+    configured &&
+    (locale !== 'ja' ||
+      configured.replace(/\.$/, '') !== defaultNLS[key]?.replace(/\.$/, ''))
+  )
+    return configured;
+  return localize(key);
 }
 
 export function getSourcesLocalize(key: string) {

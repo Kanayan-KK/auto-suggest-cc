@@ -101,6 +101,28 @@ suite('suggested scope in a selected repository', () => {
     await check('README');
   });
 
+  test('omits a redundant default scope and recalculates it when the type changes', async () => {
+    write('docs/guide.md');
+    git('add', 'docs');
+    await checkMessage([acceptDefault, acceptDefault, 'guide'], 'docs: guide');
+    await checkMessage(
+      ['feat', acceptDefault, goBack, goBack, 'docs', acceptDefault, 'guide'],
+      'docs: guide',
+    );
+    await checkMessage(
+      ['docs', acceptDefault, goBack, goBack, 'feat', acceptDefault, 'guide'],
+      'feat(docs): guide',
+    );
+    await checkMessage(
+      ['docs', 'docs', goBack, acceptDefault, 'guide'],
+      'docs(docs): guide',
+    );
+    await checkMessage(
+      ['feat', '', goBack, goBack, 'fix', acceptDefault, 'guide'],
+      'fix: guide',
+    );
+  });
+
   test('matches smart commit settings for tracked and untracked files', async () => {
     write('README.md');
     write('other/file.txt');
