@@ -3,10 +3,13 @@
  * @author vivaxy
  */
 import * as vscode from 'vscode';
+import { getPromptLocalize } from '../localize';
 
 export const confirmButton: vscode.QuickInputButton = {
   iconPath: new vscode.ThemeIcon('arrow-right'),
-  tooltip: 'confirm',
+  get tooltip() {
+    return getPromptLocalize('confirm');
+  },
 };
 
 export default function createQuickPick<T extends vscode.QuickPickItem>({

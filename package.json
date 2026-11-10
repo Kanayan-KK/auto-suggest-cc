@@ -1,10 +1,10 @@
 {
   "name": "auto-suggest-cc",
   "displayName": "%extension.name%",
-  "description": "Conventional Commits with scope suggestions from changed files.",
+  "description": "%extension.description%",
   "icon": "assets/icon.png",
   "publisher": "Kanayan-KK",
-  "version": "1.31.0",
+  "version": "1.32.0",
   "engines": {
     "vscode": "^1.44.0"
   },
@@ -134,7 +134,7 @@
             "disabled"
           ],
           "default": "fromChangedFiles",
-          "description": "Suggest a commit scope from the paths of the files being committed."
+          "description": "%extension.configuration.defaultScopeMode.description%"
         },
         "conventionalCommits.promptScopes": {
           "type": "boolean",

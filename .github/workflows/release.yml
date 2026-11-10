@@ -10,6 +10,8 @@ on:
 
 jobs:
   release:
+    # Marketplace publication belongs to the upstream extension.
+    if: github.repository == 'vivaxy/vscode-conventional-commits'
     name: release
     runs-on: ubuntu-latest
     steps:

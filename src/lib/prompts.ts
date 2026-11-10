@@ -2,7 +2,8 @@
  * @since 2020-03-25 09:09
  * @author vivaxy
  */
-import { getTypeItems, getScopePrompt, getTagPrompt } from './prompts/choices';
+import { getScopePrompt, getTagPrompt } from './prompts/choices';
+import { getTypeItems } from './prompts/type-items';
 import { gitmojiItems } from './prompts/gitmoji';
 import { runPrompts } from './prompts/run';
 import * as configuration from './configuration';
@@ -13,7 +14,7 @@ import {
   serializeHeader,
 } from './commit-message';
 import commitlint from './commitlint';
-import { getPromptLocalize } from './localize';
+import { getPromptLocalize, getPromptPlaceholder, locale } from './localize';
 import { QuickInputButtons } from 'vscode';
 import { UserPromptConfig } from '@commitlint/types/lib/prompt';
 
@@ -57,10 +58,13 @@ export default async function prompts({
   }
 
   // Keep an unclassified change pending until the user chooses a valid type.
-  const typeItems = getTypeItems(promptConfig).filter(
-    (item) => !commitlint.lintType(item.label),
-  );
-  const initialType = typeItems.find((item) => item.label === suggestedType);
+  const typeItems = getTypeItems(
+    locale,
+    commitlint.getTypeEnum(),
+    promptConfig?.questions?.type?.enum,
+    getPromptLocalize,
+  ).filter((item) => !commitlint.lintType(item.value));
+  const initialType = typeItems.find((item) => item.value === suggestedType);
   const chooseType = { label: getPromptLocalize('type.choose') };
   const questions: Prompt[] = [
     {
@@ -79,7 +83,7 @@ export default async function prompts({
       type: PROMPT_TYPES.QUICK_PICK,
       name: 'gitmoji',
       placeholder: getPromptLocalize('gitmoji.placeholder'),
-      items: gitmojiItems(emojiFormat),
+      items: gitmojiItems(emojiFormat, locale),
       trackSelection: true,
       noneItem: {
         label: getPromptLocalize('gitmoji.noneItem.label'),
@@ -94,14 +98,13 @@ export default async function prompts({
       placeholder: getPromptLocalize('ci.placeholder'),
       items: [
         {
-          label: 'Yes',
-          description: getPromptLocalize('ci.accept.label'),
+          label: getPromptLocalize('ci.accept.label'),
+          value: 'Yes',
           detail: getPromptLocalize('ci.accept.detail'),
         },
       ],
       noneItem: {
-        label: 'No',
-        description: getPromptLocalize('ci.decline.label'),
+        label: getPromptLocalize('ci.decline.label'),
         detail: getPromptLocalize('ci.decline.detail'),
         alwaysShow: true,
       },
@@ -110,9 +113,10 @@ export default async function prompts({
     {
       type: PROMPT_TYPES.INPUT_BOX,
       name: 'subject',
-      placeholder:
-        promptConfig?.questions?.subject?.description ||
-        getPromptLocalize('subject.placeholder'),
+      placeholder: getPromptPlaceholder(
+        'subject',
+        promptConfig?.questions?.subject?.description,
+      ),
       validate(input: string) {
         if (!input.trim()) return getPromptLocalize('subject.required');
         const { type, scope, gitmoji, ci, tag } = commitMessage;
@@ -168,9 +172,10 @@ export default async function prompts({
     {
       type: PROMPT_TYPES.INPUT_BOX,
       name: 'body',
-      placeholder:
-        promptConfig?.questions?.body?.description ||
-        getPromptLocalize('body.placeholder'),
+      placeholder: getPromptPlaceholder(
+        'body',
+        promptConfig?.questions?.body?.description,
+      ),
       validate(input: string) {
         return commitlint.lintBody(input);
       },
@@ -179,9 +184,10 @@ export default async function prompts({
     {
       type: PROMPT_TYPES.INPUT_BOX,
       name: 'footer',
-      placeholder:
-        promptConfig?.questions?.footer?.description ||
-        getPromptLocalize('footer.placeholder'),
+      placeholder: getPromptPlaceholder(
+        'footer',
+        promptConfig?.questions?.footer?.description,
+      ),
       validate(input: string) {
         return commitlint.lintFooter(input);
       },

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [1.32.0](https://github.com/Kanayan-KK/auto-suggest-cc/releases/tag/auto-suggest-cc-v1.32.0) (2026-11-10)
+
+- 日本語環境で、種別の見出しと説明、設定、入力画面、絵文字の説明を日本語で表示します。
+- プロジェクト独自の説明を保持し、コミットには従来の種別コードを記録します。
+- スコープ候補が確定した種別と同じ場合は「なし」を初期選択します。
+
 ## [1.31.0](https://github.com/vivaxy/vscode-conventional-commits/compare/v1.29.0...v1.31.0) (2026-05-23)
 
 ### Features

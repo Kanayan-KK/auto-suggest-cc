@@ -18,7 +18,7 @@ function answer(question: Prompt, status: PromptStatus) {
     item === question.newItemWithoutSetting
   )
     return status.value;
-  return item.label;
+  return item.value ?? item.label;
 }
 
 export async function runPrompts(questions: Prompt[], message: CommitMessage) {
@@ -26,6 +26,7 @@ export async function runPrompts(questions: Prompt[], message: CommitMessage) {
     value: '',
     activeItems: [],
   }));
+  let manualScope = false;
   let manualEmoji: Item | undefined;
   let index = 0;
   while (index < questions.length) {
@@ -41,6 +42,10 @@ export async function runPrompts(questions: Prompt[], message: CommitMessage) {
         question.noneItem!,
       );
       question.activeItems = [manualEmoji ?? automaticEmoji];
+    } else if (question.suggestedScope && !manualScope) {
+      // Let the picker select its candidate unless it repeats the confirmed type.
+      question.activeItems =
+        question.suggestedScope === message.type ? [question.noneItem!] : [];
     } else if (previous.activeItems.length) {
       question.activeItems = previous.activeItems;
     }
@@ -74,6 +79,14 @@ export async function runPrompts(questions: Prompt[], message: CommitMessage) {
 
     history[index] = result;
     const selected = result.activeItems[0];
+    if (question.suggestedScope && selected) {
+      const isDefault =
+        question.suggestedScope === message.type
+          ? selected === question.noneItem
+          : selected.label === question.suggestedScope &&
+            selected !== question.noneItem;
+      if (result.selectionChanged || !isDefault) manualScope = true;
+    }
     if (
       automaticEmoji &&
       selected &&
